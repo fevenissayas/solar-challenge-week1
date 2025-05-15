@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main, setup-task]
+  pull_request:
+    branches: [main]
+
+jobs:
+  setup-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: get project code
+        uses: actions/checkout@v3
+
+      - name: use Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: install requirements
+        run: pip install -r requirements.txt
+
+      - name: confirm python version
+        run: python --version
