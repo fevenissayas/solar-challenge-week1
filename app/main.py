@@ -1,57 +1,37 @@
-import streamlit as st
 import pandas as pd
-from utils import load_country_data, get_summary_stats
-from ui_components import (
-    country_selector,
-    metric_selector,
-    plot_type_selector,
-    boxplot_section,
-    histogram_section,
-    line_section,
-    scatter_section,
-    summary_table,
-    observations_section
-)
+import streamlit as st
+import seaborn as sns
+import matplotlib.pyplot as plt
+from utils import load_data
 
-st.set_page_config(
-    page_title="Solar Country Comparison Dashboard",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(layout="wide", page_title="Solar Comparison Dashboard")
+df = load_data()
 
-st.title("Solar Challenge: Country Comparison Dashboard")
-st.markdown("""
-This dashboard lets you compare solar resource metrics across Benin, Sierra Leone, and Togo.
-Select countries, metrics, and plot types below to visualize and compare.
-""")
+st.title("☀️ Solar Potential Comparison - Benin, Sierra Leone, Togo")
 
-# ---- UI Controls above the graph ----
-with st.container():
-    # Countries selector, full width
-    selected_countries = country_selector()
+# Widget Inputs
+countries = st.multiselect("Select countries", options=df['Country'].unique(), default=df['Country'].unique())
+metric = st.selectbox("Select Metric", ['GHI', 'DNI', 'DHI'])
 
-    # Put metric and plot type side-by-side
-    col1, col2 = st.columns(2)
-    with col1:
-        selected_metric = metric_selector()
-    with col2:
-        selected_plot = plot_type_selector()
+filtered_df = df[df['Country'].isin(countries)]
 
-    st.caption("Data is loaded from local cleaned CSV")
+# Boxplot
+st.subheader(f"{metric} Distribution by Country")
+fig, ax = plt.subplots(figsize=(6, 2))  # 👈 smaller size
+sns.boxplot(data=filtered_df, x='Country', y=metric, ax=ax, palette='Set2')
+plt.tight_layout()
+st.pyplot(fig)
 
-# ---- Load data ----
-dfs = load_country_data(selected_countries)
+# Summary Table
+st.subheader("📊 Summary Statistics")
+summary = filtered_df.groupby('Country')[[metric]].agg(['mean', 'median', 'std']).round(2)
+st.dataframe(summary)
 
-# ---- Render the selected plot type ----
-if selected_plot == "Boxplot":
-    boxplot_section(dfs, selected_metric)
-elif selected_plot == "Histogram":
-    histogram_section(dfs, selected_metric)
-elif selected_plot == "Line":
-    line_section(dfs, selected_metric)
-elif selected_plot == "Scatter":
-    scatter_section(dfs, selected_metric)
+# Bar Chart: Average Metric by Country
+st.subheader(f"📈 Average {metric} by Country")
+avg = filtered_df.groupby('Country')[metric].mean().sort_values(ascending=False)
+st.bar_chart(avg, use_container_width=True)
 
-# ---- Main summary and observations ----
-summary_table(dfs, selected_metric)
-observations_section(dfs, selected_metric, selected_plot)
+# Extra: Sample Count to support dominance of Togo
+st.caption("🔢 Sample counts per country:")
+st.dataframe(filtered_df['Country'].value_counts().rename_axis('Country').reset_index(name='Count'))
